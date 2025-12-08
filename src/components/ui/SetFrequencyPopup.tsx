@@ -15,6 +15,7 @@ import { waitForTransactionReceipt } from "viem/actions";
 import { createPublicClient, http } from "viem";
 import { executeInitialInvestment } from "~/lib/utils";
 import { AmountInput } from "./AmountInput";
+import toast from "react-hot-toast";
 
 interface SetFrequencyPopupProps {
   open: boolean;
@@ -167,6 +168,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
         }
 
         console.log("Plan updated successfully");
+        toast.success(`Plan updated: $${amount} ${frequency.toLowerCase()}`);
         onConfirm(Number(amount), frequency);
         setIsLoading(false);
         return;
@@ -226,6 +228,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
             }
           }
 
+          toast.success("Plan reactivated successfully!");
           onConfirm(Number(amount), frequency, preJson.data?.planHash, false);
           setIsLoading(false);
           return;
@@ -281,6 +284,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
           }
         }
 
+        toast.success("Plan created successfully!");
         onConfirm(Number(amount), frequency, finalJson.data?.planHash, false);
       } else {
         // User needs to approve more USDC, proceed to approval popup
@@ -293,6 +297,18 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
       setIsLoading(false);
     } catch (error) {
       console.error("Error creating plan:", error);
+
+      // Check if user cancelled the transaction
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMessage = (error as { message: string }).message.toLowerCase();
+        if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
+          toast.error("Transaction cancelled");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      toast.error("Failed to create plan. Please try again.");
       setIsLoading(false);
     }
   };

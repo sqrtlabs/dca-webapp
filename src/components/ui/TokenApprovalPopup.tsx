@@ -10,6 +10,7 @@ import { encodeFunctionData } from "viem";
 import DCA_ABI from "~/lib/contracts/DCAForwarder.json";
 import { sendCalls, waitForCallsStatus } from "@wagmi/core";
 import { wagmiConfig } from "~/app/providers";
+import toast from "react-hot-toast";
 
 import { AmountInput } from "./AmountInput";
 
@@ -144,6 +145,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
         setApprovalStatus("Waiting for approval confirmation...");
         await waitForTransactionReceipt(publicClient, { hash });
         setApprovalStatus("Approval confirmed!");
+        toast.success(`Approved ${amount} USDC successfully!`);
         onApprove(Number(amount));
         return;
       }
@@ -179,6 +181,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
         });
         await waitForTransactionReceipt(publicClient, { hash });
         setApprovalStatus("Reactivated & approved!");
+        toast.success(`Plan reactivated and approved ${amount} USDC!`);
         onApprove(Number(amount));
         return;
       }
@@ -244,6 +247,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
         }
 
         setApprovalStatus("Plan created & USDC approved!");
+        toast.success(`Plan created and approved ${amount} USDC!`);
         onApprove(Number(amount));
       } catch (batchErr) {
         console.warn(
@@ -253,23 +257,26 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
 
         // Fallback: createPlan tx then approve tx sequentially
         try {
-          const hash1 = await approveToken({
-            address: USDC_ADDRESS as `0x${string}`,
-            abi: USDC_ABI,
-            functionName: "approve",
-            args: [DCA_EXECUTOR_ADDRESS as `0x${string}`, approvalAmountInWei],
-          });
-          await waitForTransactionReceipt(publicClient, { hash: hash1 });
-
-          const hash2 = await writeContractDirect({
+          setApprovalStatus("Creating plan...");
+          const hash1 = await writeContractDirect({
             address: DCA_EXECUTOR_ADDRESS as `0x${string}`,
             abi: DCA_ABI.abi,
             functionName: "createPlan",
             args: [tokenOutAddress, address as `0x${string}`],
           });
+          await waitForTransactionReceipt(publicClient, { hash: hash1 });
+
+          setApprovalStatus("Approving USDC...");
+          const hash2 = await approveToken({
+            address: USDC_ADDRESS as `0x${string}`,
+            abi: USDC_ABI,
+            functionName: "approve",
+            args: [DCA_EXECUTOR_ADDRESS as `0x${string}`, approvalAmountInWei],
+          });
           await waitForTransactionReceipt(publicClient, { hash: hash2 });
 
           // Finalize DB
+          setApprovalStatus("Finalizing plan...");
           const finalResp = await fetch("/api/plan/createPlan", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -286,16 +293,54 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           if (!finalJson.success) {
             throw new Error(finalJson.error || "Failed to create plan in DB");
           }
+
+          // Execute initial investment (best-effort)
+          const createdPlanHash = finalJson.data?.planHash as string | undefined;
+          if (createdPlanHash) {
+            try {
+              setApprovalStatus("Executing initial investment...");
+              const invest = await executeInitialInvestment(createdPlanHash);
+              if (!invest.success) {
+                console.warn("Initial investment failed:", invest.error);
+              }
+            } catch (e) {
+              console.warn("Initial investment error:", e);
+            }
+          }
+
           setApprovalStatus("Plan created & USDC approved!");
+          toast.success(`Plan created and approved ${amount} USDC!`);
           onApprove(Number(amount));
         } catch (seqErr) {
           console.error("Sequential fallback failed:", seqErr);
           setApprovalStatus("Action failed. Please try again.");
+
+          // Check if user cancelled the transaction
+          if (seqErr && typeof seqErr === "object" && "message" in seqErr) {
+            const errorMessage = (seqErr as { message: string }).message.toLowerCase();
+            if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
+              toast.error("Transaction cancelled");
+              return;
+            }
+          }
+
+          toast.error("Failed to create plan. Please try again.");
         }
       }
     } catch (error) {
       console.error("Error approving USDC:", error);
       setApprovalStatus("Approval failed. Please try again.");
+
+      // Check if user cancelled the transaction
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMessage = (error as { message: string }).message.toLowerCase();
+        if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
+          toast.error("Transaction cancelled");
+          return;
+        }
+      }
+
+      toast.error("Failed to approve USDC. Please try again.");
     } finally {
       setIsLoading(false);
       // Clear status after a delay

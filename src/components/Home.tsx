@@ -512,6 +512,77 @@ const Home = () => {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Portfolio Chart & DCA Positions - 70% on desktop */}
           <div className="w-full lg:w-[70%] space-y-6">
+            {/* Portfolio Overview & Chart - Loading Skeleton */}
+            {isLoading && (
+              <div className="bg-[#131313] rounded-xl p-6">
+                <style>{`
+                  @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                  }
+                  @keyframes dash {
+                    to { stroke-dashoffset: -1000; }
+                  }
+                `}</style>
+
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-6">
+                  <div className="space-y-3">
+                    <div className="h-4 w-32 bg-[#2A2A2A] rounded animate-pulse" />
+                    <div className="h-12 w-48 bg-[#1E1E1F] rounded animate-pulse" />
+                    <div className="flex gap-4">
+                      <div className="h-5 w-32 bg-[#2A2A2A] rounded animate-pulse" />
+                      <div className="h-5 w-32 bg-[#2A2A2A] rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="mt-4 lg:mt-0 h-10 w-24 bg-[#1E1E1F] rounded-full animate-pulse" />
+                </div>
+
+                {/* Chart Skeleton */}
+                <div
+                  className="relative h-[400px] rounded-lg overflow-hidden"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(90deg, #1E1E1F 0, #1E1E1F 1px, transparent 1px, transparent 36px), repeating-linear-gradient(0deg, #1E1E1F 0, #1E1E1F 1px, transparent 1px, transparent 24px)",
+                    backgroundColor: "#101010",
+                  }}
+                >
+                  {/* Shimmer sweep */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)",
+                      animation: "shimmer 1.7s infinite",
+                    }}
+                  />
+                  {/* Animated dashed line */}
+                  <svg
+                    className="absolute inset-0 w-full h-full opacity-40"
+                    viewBox="0 0 400 400"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M0 300 L40 280 L80 290 L120 250 L160 270 L200 220 L240 260 L280 210 L320 240 L360 200 L400 220"
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      style={{
+                        strokeDasharray: "8 8",
+                        animation: "dash 2.8s linear infinite",
+                      }}
+                    />
+                  </svg>
+                </div>
+
+                {/* Legend Skeleton */}
+                <div className="flex items-center justify-center gap-6 mt-4">
+                  <div className="h-4 w-28 bg-[#2A2A2A] rounded animate-pulse" />
+                  <div className="h-4 w-28 bg-[#2A2A2A] rounded animate-pulse" />
+                </div>
+              </div>
+            )}
+
             {/* Portfolio Overview & Chart */}
             {!isLoading && investedTokens.length > 0 && (
               <div className="bg-[#131313] rounded-xl p-6">

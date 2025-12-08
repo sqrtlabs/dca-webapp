@@ -10,6 +10,7 @@ import { useAccount, useWriteContract } from "wagmi";
 import DCA_ABI from "~/lib/contracts/DCAForwarder.json";
 import { useRouter } from "next/navigation";
 import PlanCreatedSharePopup from "~/components/ui/PlanCreatedSharePopup";
+import toast from "react-hot-toast";
 
 interface TokenStats {
   oneYearAgo: number;
@@ -226,20 +227,34 @@ export default function TokenPage({ params }: TokenPageProps) {
         const deleteResult = await deleteResponse.json();
         if (deleteResult.success) {
           console.log("Plan deleted from database successfully");
+          toast.success("Plan deleted successfully");
         } else {
           console.error(
             "Failed to delete plan from database:",
             deleteResult.error
           );
+          toast.error("Failed to delete plan from database");
         }
       } catch (dbError) {
         console.error("Error calling deletePlan API:", dbError);
+        toast.error("Failed to delete plan");
       }
 
       await refetchPlanData();
       router.refresh();
     } catch (error) {
       console.error("Error deleting position:", error);
+
+      // Check if user cancelled the transaction
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMessage = (error as { message: string }).message.toLowerCase();
+        if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
+          toast.error("Transaction cancelled");
+          return;
+        }
+      }
+
+      toast.error("Failed to delete plan. Please try again.");
     } finally {
       setIsCancellingPlan(false);
     }
@@ -262,12 +277,16 @@ export default function TokenPage({ params }: TokenPageProps) {
       const resJson = await resp.json();
       if (!resJson.success) {
         console.error("Failed to pause plan:", resJson.error);
+        toast.error("Failed to pause plan. Please try again.");
+      } else {
+        toast.success("Plan paused successfully");
       }
 
       await refetchPlanData();
       router.refresh();
     } catch (error) {
       console.error("Error pausing position:", error);
+      toast.error("Failed to pause plan. Please try again.");
     } finally {
       setIsStoppingPlan(false);
     }
@@ -290,11 +309,15 @@ export default function TokenPage({ params }: TokenPageProps) {
       const json = await resp.json();
       if (!json.success) {
         console.error("Failed to resume plan:", json.error);
+        toast.error("Failed to resume plan. Please try again.");
+      } else {
+        toast.success("Plan resumed successfully");
       }
       await refetchPlanData();
       router.refresh();
     } catch (error) {
       console.error("Error resuming position:", error);
+      toast.error("Failed to resume plan. Please try again.");
     } finally {
       setIsResumingPlan(false);
     }

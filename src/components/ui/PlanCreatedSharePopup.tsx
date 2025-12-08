@@ -34,28 +34,15 @@ export const PlanCreatedSharePopup: React.FC<PlanCreatedSharePopupProps> = ({
     return () => clearInterval(interval);
   }, [open]);
 
-  const handleShare = async () => {
+  const handleShareOnX = () => {
     const text = `I started my DCA journey on $${tokenSymbol.toUpperCase()}.\nInvest smartly. Stop watching, start stacking.`;
     const shareUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
 
-    // Try to use Web Share API if available (mobile devices)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "DCA Journey",
-          text: text,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.log("Share cancelled or error:", err);
-      }
-    } else {
-      // Fallback: Open Twitter share (or copy to clipboard)
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        text
-      )}&url=${encodeURIComponent(shareUrl)}`;
-      window.open(twitterUrl, "_blank");
-    }
+    // Open X (Twitter) share with prefilled text
+    const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      text
+    )}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(xUrl, "_blank");
   };
 
   const popupContent = (
@@ -95,10 +82,18 @@ export const PlanCreatedSharePopup: React.FC<PlanCreatedSharePopupProps> = ({
         </p>
       </div>
       <Button
-        className="bg-orange-500 hover:bg-orange-600 text-black text-lg font-semibold py-3 rounded-xl w-full"
-        onClick={handleShare}
+        className="bg-orange-500 hover:bg-orange-600 text-black text-lg font-semibold py-3 rounded-xl w-full flex items-center justify-center gap-2"
+        onClick={handleShareOnX}
       >
-        Share my DCA journey
+        <svg
+          className="w-5 h-5"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+        Share your DCA journey on X
       </Button>
     </div>
   );
