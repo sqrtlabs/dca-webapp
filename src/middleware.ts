@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 // Add your frontend URL here
 const FRONTEND_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
 const ALLOWED_ORIGINS = [FRONTEND_URL, "http://localhost:3000"];
 
 export function middleware(request: NextRequest) {
