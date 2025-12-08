@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TokenSource {
+  CLANKER
+  GECKOTERMINAL
+  ZORA
+}
+
+model User {
+  wallet           String                 @id
+  fid              Int?                   @unique
+  plans            DCAPlan[]
+  portfolioChanges PortfolioDailyChange[]
+  createdAt        DateTime               @default(now())
+  Token            Token[]
+}
+
+model Token {
+  address         String  @id
+  symbol          String
+  name            String
+  decimals        Decimal
+  about           String?
+  image           String?
+  isWrapped       Boolean
+  wrappedName     String?
+  wrappedSymbol   String?
+  originalAddress String?
+
+  price       Decimal?
+  fdv         Decimal?
+  marketcap   Decimal?
+  volume24h   Decimal?
+  price1yAgo  Decimal?
+  totalSupply Decimal?
+
+  tokenSource TokenSource
+
+  // Which user added this token (by wallet)
+  addedBy       User?   @relation(fields: [addedByWallet], references: [wallet])
+  addedByWallet String?
+
+  // Creator's fid (not a relation)
+  createdByFid    Int?
+  createdByWallet String?
+
+  plansOut   DCAPlan[]      @relation("TokenOut")
+  executions DCAExecution[]
+}
+
+model DCAPlan {
+  planHash           String         @id
+  user               User           @relation(fields: [userWallet], references: [wallet])
+  userWallet         String
+  tokenOut           Token          @relation("TokenOut", fields: [tokenOutAddress], references: [address])
+  tokenOutAddress    String
+  recipient          String
+  amountIn           Decimal
+  frequency          Int
+  lastExecutedAt     Int
+  active             Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  approvalNotifiedAt DateTime?
+  executions         DCAExecution[]
+}
+
+model DCAExecution {
+  txHash   String  @id
+  plan     DCAPlan @relation(fields: [planHash], references: [planHash])
+  planHash String
+
+  amountIn        Decimal
+  tokenOut        Token   @relation(fields: [tokenOutAddress], references: [address])
+  tokenOutAddress String
+  amountOut       Decimal
+  feeAmount       Decimal
+
+  executedAt DateTime @default(now())
+}
+
+model UserVisit {
+  id        String   @id @default(cuid())
+  fid       Int
+  username  String?
+  visitedAt DateTime @default(now())
+
+  @@index([fid])
+  @@index([visitedAt])
+}
+
+model WebAppVisit {
+  id            String   @id @default(cuid())
+  userAddress   String
+  visitedAt     DateTime @default(now())
+
+  @@index([userAddress])
+  @@index([visitedAt])
+}
+
+model PortfolioDailyChange {
+  id         String @id @default(cuid())
+  user       User   @relation(fields: [userWallet], references: [wallet])
+  userWallet String
+
+  date               DateTime @db.Date
+  totalInvestedValue Decimal
+  currentValue       Decimal
+  percentChange      Decimal?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userWallet, date])
+  @@index([userWallet])
+  @@index([date])
+}
