@@ -888,10 +888,10 @@ const Home = () => {
                     No active DCA positions yet
                   </p>
                   <button
-                    onClick={() => setShowTokenAdd(true)}
+                    onClick={() => router.push(`/explore`)}
                     className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-black font-semibold rounded-lg transition-colors"
                   >
-                    Create Your First Position
+                    Explore tokens
                   </button>
                 </div>
               )}

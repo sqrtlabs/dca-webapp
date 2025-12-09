@@ -709,10 +709,10 @@ export default function HistoryPage() {
               Start your DCA journey to see your execution history here
             </p>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/explore")}
               className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-black font-semibold rounded-lg transition-colors"
             >
-              Create Your First Plan
+              Create Your First Plan, explore plans
             </button>
           </div>
         )}
