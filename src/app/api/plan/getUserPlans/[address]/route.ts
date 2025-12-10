@@ -72,10 +72,11 @@ export async function GET(
       // Return empty response instead of error, as user might not have plans yet
     }
 
-    // Get user's plans (active and paused) by wallet address
+    // Get user's plans (active and paused) by wallet address, excluding deleted ones
     const userPlans = await prisma.dCAPlan.findMany({
       where: {
         userWallet: address.toLowerCase(),
+        deletedAt: null, // Exclude soft-deleted plans
       },
       include: {
         tokenOut: true,

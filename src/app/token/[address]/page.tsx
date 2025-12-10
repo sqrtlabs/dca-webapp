@@ -3,11 +3,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRefresh } from "~/components/providers/RefreshProvider";
 import { SetFrequencyPopup } from "~/components/ui/SetFrequencyPopup";
 import { TokenApprovalPopup } from "~/components/ui/TokenApprovalPopup";
+import { DeletePlanPopup } from "~/components/ui/DeletePlanPopup";
 import { BalanceDisplay } from "~/components/ui/BalanceDisplay";
 import TokenViewSkeleton from "~/components/ui/TokenViewSkeleton";
 import Image from "next/image";
-import { useAccount, useWriteContract } from "wagmi";
-import DCA_ABI from "~/lib/contracts/DCAForwarder.json";
+import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import PlanCreatedSharePopup from "~/components/ui/PlanCreatedSharePopup";
 import toast from "react-hot-toast";
@@ -95,11 +95,11 @@ export default function TokenPage({ params }: TokenPageProps) {
   const [showTokenApproval, setShowTokenApproval] = useState(false);
   const [showPlanCreatedShare, setShowPlanCreatedShare] = useState(false);
   const [showEditFrequency, setShowEditFrequency] = useState(false);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
 
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const [isFrequencyExpanded, setIsFrequencyExpanded] = useState(false);
-  const [isCancellingPlan, setIsCancellingPlan] = useState(false);
   const [isStoppingPlan, setIsStoppingPlan] = useState(false);
   const [isResumingPlan, setIsResumingPlan] = useState(false);
 
@@ -138,11 +138,6 @@ export default function TokenPage({ params }: TokenPageProps) {
   useEffect(() => {
     params.then((p) => setTokenAddress(p.address));
   }, [params]);
-
-  const { writeContractAsync: cancelPlan, isPending: isCancelling } =
-    useWriteContract();
-  const DCA_EXECUTOR_ADDRESS = process.env
-    .NEXT_PUBLIC_DCA_EXECUTOR_ADDRESS as `0x${string}`;
 
   const handleSharePosition = async () => {
     try {
@@ -196,68 +191,13 @@ export default function TokenPage({ params }: TokenPageProps) {
     }
   };
 
-  const handleDeletePosition = async () => {
-    if (!address || !tokenAddress) return;
+  const handleDeletePosition = () => {
+    setShowDeletePopup(true);
+  };
 
-    try {
-      setIsCancellingPlan(true);
-
-      const hash = await cancelPlan({
-        address: DCA_EXECUTOR_ADDRESS,
-        abi: DCA_ABI.abi,
-        functionName: "cancelPlan",
-        args: [tokenAddress as `0x${string}`],
-      });
-
-      console.log("Plan cancellation transaction hash:", hash);
-
-      try {
-        const deleteResponse = await fetch("/api/plan/deletePlan", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userAddress: address,
-            tokenOutAddress: tokenAddress,
-            action: "delete",
-          }),
-        });
-
-        const deleteResult = await deleteResponse.json();
-        if (deleteResult.success) {
-          console.log("Plan deleted from database successfully");
-          toast.success("Plan deleted successfully");
-        } else {
-          console.error(
-            "Failed to delete plan from database:",
-            deleteResult.error
-          );
-          toast.error("Failed to delete plan from database");
-        }
-      } catch (dbError) {
-        console.error("Error calling deletePlan API:", dbError);
-        toast.error("Failed to delete plan");
-      }
-
-      await refetchPlanData();
-      router.refresh();
-    } catch (error) {
-      console.error("Error deleting position:", error);
-
-      // Check if user cancelled the transaction
-      if (error && typeof error === "object" && "message" in error) {
-        const errorMessage = (error as { message: string }).message.toLowerCase();
-        if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
-          toast.error("Transaction cancelled");
-          return;
-        }
-      }
-
-      toast.error("Failed to delete plan. Please try again.");
-    } finally {
-      setIsCancellingPlan(false);
-    }
+  const handlePlanDeleted = async () => {
+    await refetchPlanData();
+    router.refresh();
   };
 
   const handleStopPosition = async () => {
@@ -765,7 +705,7 @@ export default function TokenPage({ params }: TokenPageProps) {
                           : handleResumePosition
                       }
                       disabled={
-                        isStoppingPlan || isCancellingPlan || isResumingPlan
+                        isStoppingPlan || isResumingPlan
                       }
                     >
                       {activePlan.active ? (
@@ -819,16 +759,11 @@ export default function TokenPage({ params }: TokenPageProps) {
                       className="w-full py-3 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15 disabled:opacity-50 transition-colors"
                       onClick={handleDeletePosition}
                       disabled={
-                        isCancelling ||
-                        isCancellingPlan ||
                         isStoppingPlan ||
                         isResumingPlan
                       }
                     >
-                      {isCancelling || isCancellingPlan ? (
-                        "Deleting..."
-                      ) : (
-                        <span className="flex items-center justify-center gap-1">
+                      <span className="flex items-center justify-center gap-1">
                           <svg
                             width="14"
                             height="14"
@@ -863,7 +798,6 @@ export default function TokenPage({ params }: TokenPageProps) {
                           </svg>
                           Delete
                         </span>
-                      )}
                     </button>
                   </div>
                 </div>
@@ -952,6 +886,14 @@ export default function TokenPage({ params }: TokenPageProps) {
         onClose={() => setShowPlanCreatedShare(false)}
         tokenSymbol={token.symbol}
         frequencyLabel={frequencyData?.frequency || "Daily"}
+      />
+      <DeletePlanPopup
+        open={showDeletePopup}
+        onClose={() => setShowDeletePopup(false)}
+        onDeleted={handlePlanDeleted}
+        tokenSymbol={token.symbol}
+        tokenAddress={tokenAddress}
+        userAddress={address || ""}
       />
       <SetFrequencyPopup
         open={showEditFrequency}

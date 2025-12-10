@@ -30,11 +30,12 @@ export async function POST(req: Request) {
 
     const normalizedToken = tokenOutAddress.toLowerCase();
 
-    // Find the plan (regardless of current active status)
+    // Find the plan (regardless of current active status), excluding deleted plans
     const plan = await prisma.dCAPlan.findFirst({
       where: {
         userWallet: user.wallet,
         tokenOutAddress: normalizedToken,
+        deletedAt: null, // Exclude soft-deleted plans
       },
     });
 

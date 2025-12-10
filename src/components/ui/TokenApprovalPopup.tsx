@@ -312,34 +312,36 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           toast.success(`Plan created and approved ${amount} USDC!`);
           onApprove(Number(amount));
         } catch (seqErr) {
-          console.error("Sequential fallback failed:", seqErr);
-          setApprovalStatus("Action failed. Please try again.");
-
           // Check if user cancelled the transaction
           if (seqErr && typeof seqErr === "object" && "message" in seqErr) {
             const errorMessage = (seqErr as { message: string }).message.toLowerCase();
             if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
               toast.error("Transaction cancelled");
+              setApprovalStatus("Transaction cancelled");
               return;
             }
           }
 
+          // Only log non-user-rejection errors
+          console.error("Sequential fallback failed:", seqErr);
+          setApprovalStatus("Action failed. Please try again.");
           toast.error("Failed to create plan. Please try again.");
         }
       }
     } catch (error) {
-      console.error("Error approving USDC:", error);
-      setApprovalStatus("Approval failed. Please try again.");
-
       // Check if user cancelled the transaction
       if (error && typeof error === "object" && "message" in error) {
         const errorMessage = (error as { message: string }).message.toLowerCase();
         if (errorMessage.includes("user rejected") || errorMessage.includes("user denied") || errorMessage.includes("user cancelled")) {
           toast.error("Transaction cancelled");
+          setApprovalStatus("Transaction cancelled");
           return;
         }
       }
 
+      // Only log non-user-rejection errors
+      console.error("Error approving USDC:", error);
+      setApprovalStatus("Approval failed. Please try again.");
       toast.error("Failed to approve USDC. Please try again.");
     } finally {
       setIsLoading(false);

@@ -54,8 +54,10 @@ export async function GET(
     const whereClause: {
       userWallet: string;
       tokenOutAddress?: string;
+      deletedAt: null;
     } = {
       userWallet: address.toLowerCase(),
+      deletedAt: null, // Exclude soft-deleted plans
     };
 
     if (tokenAddress) {
@@ -77,7 +79,7 @@ export async function GET(
       }
     }
 
-    // Get user's plan(s)
+    // Get user's plan(s), excluding deleted ones
     const plans = await prisma.dCAPlan.findMany({
       where: whereClause,
       include: {

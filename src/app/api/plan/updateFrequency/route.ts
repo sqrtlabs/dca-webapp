@@ -45,12 +45,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Find the existing active plan
+    // Find the existing active plan, excluding deleted plans
     const existingPlan = await prisma.dCAPlan.findFirst({
       where: {
         userWallet: user.wallet,
         tokenOutAddress: tokenOut.address,
         active: true,
+        deletedAt: null, // Exclude soft-deleted plans
       },
     });
     if (!existingPlan) {

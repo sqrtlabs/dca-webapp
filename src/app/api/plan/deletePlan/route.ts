@@ -70,9 +70,13 @@ export async function POST(req: Request) {
         planHash: activePlan.planHash,
       });
     } else {
-      // Delete any plan (active or inactive) and its executions
+      // Soft delete: Mark plan as deleted without removing it or its executions
       const plan = await prisma.dCAPlan.findFirst({
-        where: { userWallet: user.wallet, tokenOutAddress: normalizedToken },
+        where: {
+          userWallet: user.wallet,
+          tokenOutAddress: normalizedToken,
+          deletedAt: null // Only find non-deleted plans
+        },
       });
 
       if (!plan) {
@@ -82,15 +86,18 @@ export async function POST(req: Request) {
         );
       }
 
-      // Delete executions first, then the plan
-      await prisma.dCAExecution.deleteMany({
+      // Soft delete: Set deletedAt timestamp, keep executions intact
+      await prisma.dCAPlan.update({
         where: { planHash: plan.planHash },
+        data: {
+          deletedAt: new Date(),
+          active: false // Also mark as inactive
+        },
       });
-      await prisma.dCAPlan.delete({ where: { planHash: plan.planHash } });
 
       return NextResponse.json({
         success: true,
-        message: "Plan and all executions deleted",
+        message: "Plan deleted (executions preserved)",
         deletedPlanHash: plan.planHash,
       });
     }

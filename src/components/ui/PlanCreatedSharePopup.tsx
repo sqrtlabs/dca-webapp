@@ -46,55 +46,102 @@ export const PlanCreatedSharePopup: React.FC<PlanCreatedSharePopupProps> = ({
   };
 
   const popupContent = (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <span className="text-2xl font-semibold text-white">
-          Plan Created 🎉
-        </span>
-        <button className="text-gray-400 hover:text-white text-2xl transition-colors" onClick={onClose}>
-          ×
-        </button>
+    <div className="space-y-8 relative">
+      {/* Close button */}
+      <button
+        className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[#2A2A2A] hover:bg-[#333] text-gray-400 hover:text-white transition-all flex items-center justify-center text-xl font-light z-10"
+        onClick={onClose}
+      >
+        ×
+      </button>
+
+      {/* Success Header with Animation */}
+      <div className="text-center space-y-2">
+        <div className="w-full flex justify-center mb-4">
+          <div className="relative">
+            {/* Animated rings */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/20 to-orange-600/20 animate-ping"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/30 to-orange-600/30 animate-pulse"></div>
+            {/* Logo container */}
+            <div className="relative bg-gradient-to-br p-5 rounded-full shadow-lg shadow-orange-500/50">
+              <Image
+                src={IMAGES[imageIndex]}
+                alt="DCA logo"
+                width={80}
+                height={80}
+                className="w-20 h-20"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+        <h2 className="text-3xl font-bold text-white">
+          Plan Created Successfully!
+        </h2>
+        <p className="text-orange-400 text-lg font-medium">
+          Your DCA journey has begun
+        </p>
       </div>
-      <div className="w-full flex justify-center">
-        <div className="border-2 border-orange-500 p-4 rounded-full">
-          <Image
-            src={IMAGES[imageIndex]}
-            alt="DCA logo"
-            width={80}
-            height={80}
-            className="w-20 h-20"
-            priority
-          />
+
+      {/* Plan Details Card */}
+      <div className="bg-gradient-to-br from-[#1E1E1F] to-[#1A1A1A] rounded-2xl p-6 border border-[#2A2A2A] space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400 text-sm font-medium">Token</span>
+          <span className="text-white text-lg font-bold">${tokenSymbol.toUpperCase()}</span>
+        </div>
+        <div className="h-px bg-gradient-to-r from-transparent via-[#2A2A2A] to-transparent"></div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400 text-sm font-medium">Frequency</span>
+          <span className="text-orange-400 text-base font-semibold">
+            {frequencyLabel.toLowerCase().includes("minute") ||
+            frequencyLabel.toLowerCase().includes("hour")
+              ? `Every ${frequencyLabel}`
+              : frequencyLabel}
+          </span>
         </div>
       </div>
-      <div className="space-y-4">
-        <p className="text-gray-300 text-base leading-relaxed">
-          DCA is one of the most proven ways to stay consistent and smooth out
-          market swings.
-        </p>
-        <p className="text-gray-400 text-sm">
-          {tokenSymbol} will be invested{" "}
-          {frequencyLabel.toLowerCase().includes("minute") ||
-          frequencyLabel.toLowerCase().includes("hour")
-            ? `every ${frequencyLabel}`
-            : frequencyLabel}
-          .
-        </p>
+
+      {/* Info Section */}
+      <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+        <div className="flex gap-3">
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1">
+            <p className="text-gray-300 text-sm leading-relaxed">
+              DCA (Dollar Cost Averaging) helps you invest consistently and smooth out market volatility. Your investments will run automatically at your set frequency.
+            </p>
+          </div>
+        </div>
       </div>
-      <Button
-        className="bg-orange-500 hover:bg-orange-600 text-black text-lg font-semibold py-3 rounded-xl w-full flex items-center justify-center gap-2"
-        onClick={handleShareOnX}
-      >
-        <svg
-          className="w-5 h-5"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
+
+      {/* Action Buttons */}
+      <div className="space-y-3">
+        <Button
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-black text-base font-bold py-4 rounded-xl w-full flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 transform hover:scale-[1.02]"
+          onClick={handleShareOnX}
         >
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-        Share your DCA journey on X
-      </Button>
+          <svg
+            className="w-5 h-5"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          Share on X
+        </Button>
+        <button
+          className="w-full py-3 text-gray-400 hover:text-white text-sm font-medium transition-colors"
+          onClick={onClose}
+        >
+          Skip for now
+        </button>
+      </div>
     </div>
   );
 

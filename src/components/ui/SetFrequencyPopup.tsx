@@ -296,8 +296,6 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
 
       setIsLoading(false);
     } catch (error) {
-      console.error("Error creating plan:", error);
-
       // Check if user cancelled the transaction
       if (error && typeof error === "object" && "message" in error) {
         const errorMessage = (error as { message: string }).message.toLowerCase();
@@ -308,6 +306,8 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
         }
       }
 
+      // Only log non-user-rejection errors
+      console.error("Error creating plan:", error);
       toast.error("Failed to create plan. Please try again.");
       setIsLoading(false);
     }

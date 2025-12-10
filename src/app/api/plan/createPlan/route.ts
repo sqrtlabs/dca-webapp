@@ -71,18 +71,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if plan already exists
+    // Check if plan already exists (including soft-deleted plans)
     const existingPlan = await prisma.dCAPlan.findUnique({
       where: { planHash },
     });
 
     if (existingPlan) {
-      // If plan exists but is inactive, reactivate it (DB only)
-      if (!existingPlan.active) {
+      // If plan was soft-deleted or is inactive, reactivate it (DB only)
+      if (existingPlan.deletedAt !== null || !existingPlan.active) {
         const reactivatedPlan = await prisma.dCAPlan.update({
           where: { planHash },
           data: {
             active: true,
+            deletedAt: null, // Clear soft-delete timestamp
             amountIn,
             frequency,
             lastExecutedAt: 0,
