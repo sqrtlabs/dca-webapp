@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useAccount } from "wagmi";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { BalanceDisplay } from "~/components/ui/BalanceDisplay";
 import { TokenApprovalPopup } from "~/components/ui/TokenApprovalPopup";
@@ -80,27 +80,30 @@ const formatAddress = (addr: string) => {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 };
 
-export default function HistoryPage() {
+function HistoryPageContent() {
   const { address } = useAccount();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Extract token from URL params
+  const tokenFromUrl = searchParams.get('token');
+
   const [historyData, setHistoryData] = useState<HistoryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedToken, setSelectedToken] = useState<string | null>(null);
+  const [selectedToken, setSelectedToken] = useState<string | null>(tokenFromUrl);
   const [showTokenApproval, setShowTokenApproval] = useState(false);
   const [showTokenDropdown, setShowTokenDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Check for token filter in URL params
+  // Check for token filter in URL params - reactive to URL changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tokenParam = urlParams.get('token');
-      if (tokenParam) {
-        setSelectedToken(tokenParam);
-      }
+    // Always sync with URL params
+    setSelectedToken(tokenFromUrl);
+    if (tokenFromUrl) {
+      setCurrentPage(1); // Reset to page 1 when filter is applied
     }
-  }, []);
+  }, [tokenFromUrl]); // Use the actual token value as dependency
 
   const fetchHistory = useCallback(async () => {
     if (!address) return;
@@ -140,7 +143,7 @@ export default function HistoryPage() {
     if (address) {
       fetchHistory();
     }
-  }, [address, fetchHistory]);
+  }, [address, selectedToken, currentPage, selectedDate, fetchHistory]);
 
   // Generate activity grid grouped by month
   const generateMonthlyActivityGrids = () => {
@@ -250,7 +253,10 @@ export default function HistoryPage() {
               >
                 Explore
               </button>
-              <button className="px-4 py-2 text-orange-500 bg-orange-500/10 rounded-lg font-medium">
+              <button
+                onClick={() => router.push("/history")}
+                className="px-4 py-2 text-orange-500 bg-orange-500/10 rounded-lg font-medium"
+              >
                 History
               </button>
             </nav>
@@ -460,9 +466,8 @@ export default function HistoryPage() {
                     <div className="absolute top-full left-0 mt-2 w-64 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-2xl z-20 max-h-80 overflow-y-auto">
                       <button
                         onClick={() => {
-                          setSelectedToken(null);
-                          setCurrentPage(1);
                           setShowTokenDropdown(false);
+                          router.push('/history');
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#2A2A2A] transition-colors ${
                           !selectedToken ? "bg-orange-500/10 text-orange-500" : "text-white"
@@ -477,9 +482,8 @@ export default function HistoryPage() {
                         <button
                           key={token.address}
                           onClick={() => {
-                            setSelectedToken(token.address);
-                            setCurrentPage(1);
                             setShowTokenDropdown(false);
+                            router.push(`/history?token=${token.address}`);
                           }}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#2A2A2A] transition-colors ${
                             selectedToken === token.address
@@ -727,5 +731,17 @@ export default function HistoryPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-gray-600 border-t-orange-500 rounded-full animate-spin"></div>
+      </div>
+    }>
+      <HistoryPageContent />
+    </Suspense>
   );
 }

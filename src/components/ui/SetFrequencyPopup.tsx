@@ -12,7 +12,7 @@ import DCA_ABI from "~/lib/contracts/DCAForwarder.json";
 import { USDC_ABI } from "~/lib/contracts/abi";
 import { base } from "viem/chains";
 import { waitForTransactionReceipt } from "viem/actions";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, isAddress } from "viem";
 import { executeInitialInvestment } from "~/lib/utils";
 import { AmountInput } from "./AmountInput";
 import toast from "react-hot-toast";
@@ -24,7 +24,8 @@ interface SetFrequencyPopupProps {
     amount: number,
     frequency: string,
     planHash?: string,
-    approvalNeeded?: boolean
+    approvalNeeded?: boolean,
+    recipient?: `0x${string}`
   ) => void;
   tokenOut: `0x${string}`;
   initialAmount?: number;
@@ -55,6 +56,9 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [amountError, setAmountError] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [customRecipient, setCustomRecipient] = useState("");
+  const [recipientError, setRecipientError] = useState("");
   const { address } = useAccount();
   const DCA_EXECUTOR_ADDRESS = process.env
     .NEXT_PUBLIC_DCA_EXECUTOR_ADDRESS as `0x${string}`;
@@ -104,8 +108,25 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
       setAmount(initialAmount.toString());
       setFrequency(initialFrequency);
       setAmountError(false);
+      setShowAdvanced(false);
+      setCustomRecipient("");
+      setRecipientError("");
     }
   }, [open, initialAmount, initialFrequency]);
+
+  // Validate recipient address
+  const validateRecipient = (addr: string): boolean => {
+    if (!addr || addr.trim() === "") {
+      setRecipientError("");
+      return true;
+    }
+    if (!isAddress(addr)) {
+      setRecipientError("Invalid Ethereum address");
+      return false;
+    }
+    setRecipientError("");
+    return true;
+  };
 
   const getFrequencyInSeconds = (frequency: string): number => {
     switch (frequency) {
@@ -136,6 +157,16 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
       setAmountError(true);
       return;
     }
+
+    // Validate custom recipient if provided
+    if (customRecipient && !validateRecipient(customRecipient)) {
+      return;
+    }
+
+    // Determine final recipient: custom if provided and valid, otherwise user's address
+    const finalRecipient = (customRecipient && isAddress(customRecipient)
+      ? customRecipient
+      : address) as `0x${string}`;
 
     try {
       setIsLoading(true);
@@ -169,7 +200,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
 
         console.log("Plan updated successfully");
         toast.success(`Plan updated: $${amount} ${frequency.toLowerCase()}`);
-        onConfirm(Number(amount), frequency);
+        onConfirm(Number(amount), frequency, undefined, false, finalRecipient);
         setIsLoading(false);
         return;
       }
@@ -192,7 +223,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
           body: JSON.stringify({
             userAddress: address,
             tokenOutAddress: tokenOut,
-            recipient: address,
+            recipient: finalRecipient,
             amountIn: Number(requiredAllowance),
             frequency: freqSeconds,
           }),
@@ -229,7 +260,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
           }
 
           toast.success("Plan reactivated successfully!");
-          onConfirm(Number(amount), frequency, preJson.data?.planHash, false);
+          onConfirm(Number(amount), frequency, preJson.data?.planHash, false, finalRecipient);
           setIsLoading(false);
           return;
         }
@@ -240,7 +271,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
           address: DCA_EXECUTOR_ADDRESS,
           abi: DCA_ABI.abi,
           functionName: "createPlan",
-          args: [tokenOut, address],
+          args: [tokenOut, finalRecipient],
         });
 
         setTxHash(hash);
@@ -253,7 +284,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
           body: JSON.stringify({
             userAddress: address,
             tokenOutAddress: tokenOut,
-            recipient: address,
+            recipient: finalRecipient,
             amountIn: Number(requiredAllowance),
             frequency: freqSeconds,
             finalize: true,
@@ -285,13 +316,13 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
         }
 
         toast.success("Plan created successfully!");
-        onConfirm(Number(amount), frequency, finalJson.data?.planHash, false);
+        onConfirm(Number(amount), frequency, finalJson.data?.planHash, false, finalRecipient);
       } else {
         // User needs to approve more USDC, proceed to approval popup
         console.log(
           "User needs more USDC allowance, proceeding to approval popup..."
         );
-        onConfirm(Number(amount), frequency, undefined, true);
+        onConfirm(Number(amount), frequency, undefined, true, finalRecipient);
       }
 
       setIsLoading(false);
@@ -375,6 +406,45 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
         </select>
       </div>
       {!editMode && (
+        <>
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-orange-500 hover:text-orange-400 text-sm font-medium flex items-center gap-1 transition-colors"
+            >
+              <span>{showAdvanced ? "▼" : "▶"}</span>
+              Advanced: Custom Recipient
+            </button>
+          </div>
+          {showAdvanced && (
+            <div className="mb-6">
+              <label className="block text-gray-400 mb-2 text-sm">
+                Recipient Address (Optional)
+              </label>
+              <Input
+                type="text"
+                value={customRecipient}
+                onChange={(e) => {
+                  setCustomRecipient(e.target.value);
+                  validateRecipient(e.target.value);
+                }}
+                placeholder="0x... (leave empty to use your wallet)"
+                className={`w-full bg-[#2A2A2A] text-white border ${
+                  recipientError ? "border-red-500" : "border-gray-700"
+                } rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none`}
+              />
+              {recipientError && (
+                <p className="mt-2 text-red-400 text-xs">{recipientError}</p>
+              )}
+              <p className="mt-2 text-gray-400 text-xs">
+                Tokens will be sent to this address instead of your wallet. Leave empty to receive tokens in your connected wallet.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+      {!editMode && (
         <div className="mb-6 p-4 bg-[#2A2A2A] rounded-lg text-gray-300 text-xs leading-relaxed">
           Creating your plan may ask you to approve USDC and confirm a
           transaction. Your USDC approval is scoped to this DCA executor and
@@ -385,7 +455,7 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
       <Button
         className="bg-orange-500 hover:bg-orange-600 text-black text-lg font-semibold py-3 rounded-xl w-full disabled:bg-gray-600 disabled:text-gray-400"
         onClick={handleConfirm}
-        disabled={isLoading || amount === "" || Number(amount) === 0}
+        disabled={isLoading || amount === "" || Number(amount) === 0 || !!recipientError}
       >
         {(() => {
           if (isLoading) {

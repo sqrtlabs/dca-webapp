@@ -84,6 +84,7 @@ export async function POST(req: Request) {
           data: {
             active: true,
             deletedAt: null, // Clear soft-delete timestamp
+            recipient, // Update recipient in case it changed
             amountIn,
             frequency,
             lastExecutedAt: 0,

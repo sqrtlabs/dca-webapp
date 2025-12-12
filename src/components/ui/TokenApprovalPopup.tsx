@@ -25,6 +25,7 @@ interface TokenApprovalPopupProps {
   frequencySeconds?: number;
   hasActivePlan?: boolean;
   planAmount?: number; // amount selected in SetFrequencyPopup (USDC units)
+  recipient?: `0x${string}`; // custom recipient address for tokens
 }
 
 const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}`;
@@ -43,6 +44,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
   frequencySeconds = 86400,
   hasActivePlan = false,
   planAmount,
+  recipient,
 }) => {
   // Use planAmount as default if available, otherwise use defaultAmount
   const [amount, setAmount] = useState(
@@ -122,6 +124,9 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
   const handleApprove = async () => {
     if (!address) return;
 
+    // Use custom recipient if provided, otherwise use connected wallet address
+    const finalRecipient = (recipient || address) as `0x${string}`;
+
     try {
       setIsLoading(true);
       const approvalAmountInWei = BigInt(Number(amount) * 1000000);
@@ -160,7 +165,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
         body: JSON.stringify({
           userAddress: address,
           tokenOutAddress,
-          recipient: address,
+          recipient: finalRecipient,
           amountIn: Number(planAmountInWei),
           frequency: frequencySeconds,
         }),
@@ -196,7 +201,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
       const createPlanData = encodeFunctionData({
         abi: DCA_ABI.abi,
         functionName: "createPlan",
-        args: [tokenOutAddress, address as `0x${string}`],
+        args: [tokenOutAddress, finalRecipient],
       });
       console.log("naya naya EIP");
 
@@ -222,7 +227,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           body: JSON.stringify({
             userAddress: address,
             tokenOutAddress,
-            recipient: address,
+            recipient: finalRecipient,
             amountIn: Number(planAmountInWei),
             frequency: frequencySeconds,
             finalize: true,
@@ -262,7 +267,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
             address: DCA_EXECUTOR_ADDRESS as `0x${string}`,
             abi: DCA_ABI.abi,
             functionName: "createPlan",
-            args: [tokenOutAddress, address as `0x${string}`],
+            args: [tokenOutAddress, finalRecipient],
           });
           await waitForTransactionReceipt(publicClient, { hash: hash1 });
 
@@ -283,7 +288,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
             body: JSON.stringify({
               userAddress: address,
               tokenOutAddress,
-              recipient: address,
+              recipient: finalRecipient,
               amountIn: Number(planAmountInWei),
               frequency: frequencySeconds,
               finalize: true,
@@ -380,6 +385,14 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           </button>
         ))}
       </div>
+      {recipient && recipient !== address && (
+        <div className="mb-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg text-purple-300 text-sm">
+          <div className="font-semibold mb-1">Custom Recipient</div>
+          <div className="text-xs break-all">
+            Tokens will be sent to: {recipient}
+          </div>
+        </div>
+      )}
       {currentAllowance !== undefined && (
         <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-blue-300 text-sm">
           Current allowance:{" "}

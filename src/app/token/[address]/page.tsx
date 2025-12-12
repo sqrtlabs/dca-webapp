@@ -102,6 +102,7 @@ export default function TokenPage({ params }: TokenPageProps) {
   const [isFrequencyExpanded, setIsFrequencyExpanded] = useState(false);
   const [isStoppingPlan, setIsStoppingPlan] = useState(false);
   const [isResumingPlan, setIsResumingPlan] = useState(false);
+  const [copiedRecipient, setCopiedRecipient] = useState(false);
 
   const [frequencyData, setFrequencyData] = useState<{
     amount: number;
@@ -112,6 +113,9 @@ export default function TokenPage({ params }: TokenPageProps) {
   );
   const [approvalNeededForNewPlan, setApprovalNeededForNewPlan] = useState<
     boolean | undefined
+  >(undefined);
+  const [customRecipient, setCustomRecipient] = useState<
+    `0x${string}` | undefined
   >(undefined);
   const [token, setToken] = useState<Token>({
     name: "",
@@ -138,6 +142,23 @@ export default function TokenPage({ params }: TokenPageProps) {
   useEffect(() => {
     params.then((p) => setTokenAddress(p.address));
   }, [params]);
+
+  const handleCopyRecipient = async (recipientAddress: string) => {
+    try {
+      await navigator.clipboard.writeText(recipientAddress);
+      setCopiedRecipient(true);
+      toast.success("Recipient address copied!");
+      setTimeout(() => setCopiedRecipient(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      toast.error("Failed to copy address");
+    }
+  };
+
+  const formatAddress = (addr: string) => {
+    if (!addr) return "";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   const handleSharePosition = async () => {
     try {
@@ -636,6 +657,45 @@ export default function TokenPage({ params }: TokenPageProps) {
                       </span>
                     </div>
                   </div>
+                  {/* Recipient Section */}
+                  <div className="mt-6 pt-6 border-t border-gray-800">
+                    <h3 className="text-base font-semibold mb-3">Recipient</h3>
+                    <button
+                      onClick={() => handleCopyRecipient(activePlan.recipient)}
+                      className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-[#1E1E1F] hover:bg-[#2A2A2A] rounded-lg text-white transition-colors group"
+                      title="Click to copy address"
+                    >
+                      <span className="text-sm font-mono break-all text-left">
+                        {activePlan.recipient}
+                      </span>
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="flex-shrink-0 text-gray-400 group-hover:text-orange-500 transition-colors"
+                      >
+                        <rect
+                          x="9"
+                          y="9"
+                          width="13"
+                          height="13"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -811,10 +871,11 @@ export default function TokenPage({ params }: TokenPageProps) {
       <SetFrequencyPopup
         open={showSetFrequency}
         onClose={() => setShowSetFrequency(false)}
-        onConfirm={(amount, frequency, planHash, approvalNeeded) => {
+        onConfirm={(amount, frequency, planHash, approvalNeeded, recipient) => {
           setFrequencyData({ amount, frequency });
           setPendingPlanHash(planHash);
           setApprovalNeededForNewPlan(approvalNeeded);
+          setCustomRecipient(recipient);
           setShowSetFrequency(false);
           if (approvalNeeded) {
             setTimeout(() => setShowTokenApproval(true), 200);
@@ -834,6 +895,7 @@ export default function TokenPage({ params }: TokenPageProps) {
         onApprove={(amount) => {
           setShowTokenApproval(false);
           setPendingPlanHash(undefined);
+          setCustomRecipient(undefined);
           if (approvalNeededForNewPlan) {
             setTimeout(() => setShowPlanCreatedShare(true), 300);
           }
@@ -880,6 +942,7 @@ export default function TokenPage({ params }: TokenPageProps) {
         })()}
         hasActivePlan={token.hasActivePlan}
         planAmount={frequencyData?.amount}
+        recipient={customRecipient}
       />
       <PlanCreatedSharePopup
         open={showPlanCreatedShare}
@@ -898,7 +961,7 @@ export default function TokenPage({ params }: TokenPageProps) {
       <SetFrequencyPopup
         open={showEditFrequency}
         onClose={() => setShowEditFrequency(false)}
-        onConfirm={async () => {
+        onConfirm={async (amount, frequency, planHash, approvalNeeded, recipient) => {
           setShowEditFrequency(false);
           if (address && tokenAddress) {
             const response = await fetch(
