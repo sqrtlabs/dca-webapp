@@ -871,17 +871,14 @@ export default function TokenPage({ params }: TokenPageProps) {
       <SetFrequencyPopup
         open={showSetFrequency}
         onClose={() => setShowSetFrequency(false)}
-        onConfirm={(amount, frequency, planHash, approvalNeeded, recipient) => {
+        onConfirm={(amount, frequency, planHash, needsInitialInvestment, recipient) => {
           setFrequencyData({ amount, frequency });
           setPendingPlanHash(planHash);
-          setApprovalNeededForNewPlan(approvalNeeded);
+          setApprovalNeededForNewPlan(needsInitialInvestment);
           setCustomRecipient(recipient);
           setShowSetFrequency(false);
-          if (approvalNeeded) {
-            setTimeout(() => setShowTokenApproval(true), 200);
-          } else {
-            setTimeout(() => setShowPlanCreatedShare(true), 300);
-          }
+          // Always show approval popup (even if they have enough allowance)
+          setTimeout(() => setShowTokenApproval(true), 200);
           setTimeout(async () => {
             await refetchPlanData();
             router.refresh();
@@ -891,14 +888,29 @@ export default function TokenPage({ params }: TokenPageProps) {
       />
       <TokenApprovalPopup
         open={showTokenApproval}
-        onClose={() => setShowTokenApproval(false)}
-        onApprove={(amount) => {
+        onClose={() => {
           setShowTokenApproval(false);
-          setPendingPlanHash(undefined);
-          setCustomRecipient(undefined);
-          if (approvalNeededForNewPlan) {
+          // If this was for a new plan (pendingPlanHash exists), still show the PlanCreated popup
+          if (pendingPlanHash) {
             setTimeout(() => setShowPlanCreatedShare(true), 300);
           }
+          setPendingPlanHash(undefined);
+          setCustomRecipient(undefined);
+          setApprovalNeededForNewPlan(undefined);
+          setTimeout(async () => {
+            await refetchPlanData();
+            refreshBalance();
+            router.refresh();
+          }, 800);
+        }}
+        onApprove={(amount) => {
+          setShowTokenApproval(false);
+          // If this was for a new plan (pendingPlanHash exists), show the PlanCreated popup
+          if (pendingPlanHash) {
+            setTimeout(() => setShowPlanCreatedShare(true), 300);
+          }
+          setPendingPlanHash(undefined);
+          setCustomRecipient(undefined);
           setApprovalNeededForNewPlan(undefined);
           setTimeout(async () => {
             await refetchPlanData();
@@ -943,6 +955,7 @@ export default function TokenPage({ params }: TokenPageProps) {
         hasActivePlan={token.hasActivePlan}
         planAmount={frequencyData?.amount}
         recipient={customRecipient}
+        needsInitialInvestment={approvalNeededForNewPlan}
       />
       <PlanCreatedSharePopup
         open={showPlanCreatedShare}

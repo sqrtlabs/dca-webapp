@@ -91,6 +91,7 @@ export async function GET(
     const tokenPlanMap = new Map();
     const tokenExecutionMap = new Map();
     const tokenPlanCreatedAtMap = new Map();
+    const tokenPlanActivatedAtMap = new Map();
 
     if (userPlans.length === 0) {
       console.log(
@@ -102,8 +103,9 @@ export async function GET(
       // Mark tokens that have any plan (active or paused)
       tokenPlanMap.set(plan.tokenOut.address, true);
 
-      // Store the earliest createdAt for this token (in case of multiple plans)
       const tokenAddress = plan.tokenOut.address;
+
+      // Store the earliest createdAt for this token (in case of multiple plans)
       if (
         !tokenPlanCreatedAtMap.has(tokenAddress) ||
         plan.createdAt < tokenPlanCreatedAtMap.get(tokenAddress)
@@ -111,11 +113,25 @@ export async function GET(
         tokenPlanCreatedAtMap.set(tokenAddress, plan.createdAt);
       }
 
-      // Aggregate executions for this token
+      // Store the most recent lastActivatedAt (or createdAt if null) for time display
+      const activationDate = plan.lastActivatedAt || plan.createdAt;
+      if (
+        !tokenPlanActivatedAtMap.has(tokenAddress) ||
+        activationDate > tokenPlanActivatedAtMap.get(tokenAddress)
+      ) {
+        tokenPlanActivatedAtMap.set(tokenAddress, activationDate);
+      }
+
+      // Filter executions to only include those after lastActivatedAt (or createdAt if null)
+      const filteredExecutions = plan.executions.filter(
+        (exec) => exec.executedAt > activationDate
+      );
+
+      // Aggregate filtered executions for this token
       if (!tokenExecutionMap.has(tokenAddress)) {
         tokenExecutionMap.set(tokenAddress, []);
       }
-      tokenExecutionMap.get(tokenAddress).push(...plan.executions);
+      tokenExecutionMap.get(tokenAddress).push(...filteredExecutions);
     });
 
     // Process tokens with user data using token model fields
@@ -198,7 +214,7 @@ export async function GET(
           (p) => p.tokenOut.address === token.address && p.active
         ),
         planCreatedAt:
-          tokenPlanCreatedAtMap.get(token.address)?.toISOString() || null,
+          tokenPlanActivatedAtMap.get(token.address)?.toISOString() || null, // Use lastActivatedAt instead of createdAt
         totalInvestedValue,
         currentValue,
         percentChange,

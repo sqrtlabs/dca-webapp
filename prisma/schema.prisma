@@ -67,6 +67,7 @@ model DCAPlan {
   lastExecutedAt     Int
   active             Boolean        @default(true)
   createdAt          DateTime       @default(now())
+  lastActivatedAt    DateTime?       
   deletedAt          DateTime?
   approvalNotifiedAt DateTime?
   executions         DCAExecution[]

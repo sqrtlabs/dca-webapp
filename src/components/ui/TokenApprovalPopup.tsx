@@ -21,11 +21,12 @@ interface TokenApprovalPopupProps {
   token?: string;
   defaultAmount?: number;
   tokenOutAddress?: `0x${string}`;
-  planHash?: string; // Add planHash for initial investment execution
+  planHash?: string; // planHash for initial investment execution
   frequencySeconds?: number;
   hasActivePlan?: boolean;
   planAmount?: number; // amount selected in SetFrequencyPopup (USDC units)
   recipient?: `0x${string}`; // custom recipient address for tokens
+  needsInitialInvestment?: boolean; // whether to execute initial investment after approval
 }
 
 const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}`;
@@ -45,10 +46,11 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
   hasActivePlan = false,
   planAmount,
   recipient,
+  needsInitialInvestment = false,
 }) => {
-  // Use planAmount as default if available, otherwise use defaultAmount
+  // Use at least $100 as default, or more if planAmount is higher
   const [amount, setAmount] = useState(
-    planAmount?.toString() || defaultAmount.toString()
+    Math.max(100, planAmount || defaultAmount).toString()
   );
   const [isLoading, setIsLoading] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<string>("");
@@ -56,10 +58,10 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
 
   // Update amount when popup opens with new planAmount
   React.useEffect(() => {
-    if (open && planAmount) {
-      setAmount(planAmount.toString());
+    if (open) {
+      setAmount(Math.max(100, planAmount || defaultAmount).toString());
     }
-  }, [open, planAmount]);
+  }, [open, planAmount, defaultAmount]);
 
   const { writeContractAsync: approveToken, isPending } = useWriteContract();
   const { writeContractAsync: writeContractDirect } = useWriteContract();
@@ -137,6 +139,44 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
         !hasActivePlan &&
         planAmount !== undefined &&
         tokenOutAddress !== undefined;
+
+      // If planHash is provided, plan was already created by SetFrequencyPopup
+      // Just approve USDC without creating the plan again (to avoid updating lastActivatedAt)
+      if (planHash) {
+        setApprovalStatus("Approving USDC...");
+        const hash = await approveToken({
+          address: USDC_ADDRESS as `0x${string}`,
+          abi: USDC_ABI,
+          functionName: "approve",
+          args: [DCA_EXECUTOR_ADDRESS as `0x${string}`, approvalAmountInWei],
+        });
+        setApprovalStatus("Waiting for approval confirmation...");
+        await waitForTransactionReceipt(publicClient, { hash });
+        setApprovalStatus("Approval confirmed!");
+
+        // Execute initial investment after approval ONLY if it wasn't executed in SetFrequencyPopup
+        if (needsInitialInvestment) {
+          try {
+            setApprovalStatus("Executing initial investment...");
+            const invest = await executeInitialInvestment(planHash);
+            if (!invest.success) {
+              console.warn("Initial investment failed:", invest.error);
+              toast.success(`Approved ${amount} USDC!`);
+            } else {
+              console.log("Initial investment executed successfully:", invest.txHash);
+              toast.success(`Approved ${amount} USDC and executed initial investment!`);
+            }
+          } catch (e) {
+            console.warn("Initial investment error:", e);
+            toast.success(`Approved ${amount} USDC!`);
+          }
+        } else {
+          toast.success(`Approved ${amount} USDC successfully!`);
+        }
+
+        onApprove(Number(amount));
+        return;
+      }
 
       // If user already has an active plan OR no plan data, only approve more USDC
       if (hasActivePlan || !isCreatingNewPlan) {
@@ -238,19 +278,6 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           throw new Error(finalJson.error || "Failed to create plan in DB");
         }
 
-        // Optionally execute initial investment (best-effort)
-        const createdPlanHash = finalJson.data?.planHash as string | undefined;
-        if (createdPlanHash) {
-          try {
-            const invest = await executeInitialInvestment(createdPlanHash);
-            if (!invest.success) {
-              console.warn("Initial investment failed:", invest.error);
-            }
-          } catch (e) {
-            console.warn("Initial investment error:", e);
-          }
-        }
-
         setApprovalStatus("Plan created & USDC approved!");
         toast.success(`Plan created and approved ${amount} USDC!`);
         onApprove(Number(amount));
@@ -297,20 +324,6 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           const finalJson = await finalResp.json();
           if (!finalJson.success) {
             throw new Error(finalJson.error || "Failed to create plan in DB");
-          }
-
-          // Execute initial investment (best-effort)
-          const createdPlanHash = finalJson.data?.planHash as string | undefined;
-          if (createdPlanHash) {
-            try {
-              setApprovalStatus("Executing initial investment...");
-              const invest = await executeInitialInvestment(createdPlanHash);
-              if (!invest.success) {
-                console.warn("Initial investment failed:", invest.error);
-              }
-            } catch (e) {
-              console.warn("Initial investment error:", e);
-            }
           }
 
           setApprovalStatus("Plan created & USDC approved!");
@@ -400,8 +413,7 @@ export const TokenApprovalPopup: React.FC<TokenApprovalPopupProps> = ({
           USDC
           {planAmount && currentAllowance > 0n && (
             <div className="mt-2 text-xs text-blue-200">
-              💡 You already have some allowance. You can extend it to ${amount}{" "}
-              for more flexibility.
+              💡 You already have some allowance. Extend it to a bigger value to keep the plan running smooth.
             </div>
           )}
         </div>

@@ -77,36 +77,30 @@ export async function POST(req: Request) {
     });
 
     if (existingPlan) {
-      // If plan was soft-deleted or is inactive, reactivate it (DB only)
-      if (existingPlan.deletedAt !== null || !existingPlan.active) {
-        const reactivatedPlan = await prisma.dCAPlan.update({
-          where: { planHash },
-          data: {
-            active: true,
-            deletedAt: null, // Clear soft-delete timestamp
-            recipient, // Update recipient in case it changed
-            amountIn,
-            frequency,
-            lastExecutedAt: 0,
-            createdAt: new Date(),
-          },
-          include: { user: true, tokenOut: true },
-        });
+      // Always update the plan with new values (even if active)
+      const updatedPlan = await prisma.dCAPlan.update({
+        where: { planHash },
+        data: {
+          active: true,
+          deletedAt: null, // Clear soft-delete timestamp
+          recipient, // Update recipient in case it changed
+          amountIn,
+          frequency,
+          lastExecutedAt: 0,
+          lastActivatedAt: new Date(), // Set new activation time for fresh start
+        },
+        include: { user: true, tokenOut: true },
+      });
 
-        return NextResponse.json({
-          success: true,
-          reactivated: true,
-          txRequired: false,
-          data: reactivatedPlan,
-          message: "Plan reactivated successfully",
-        });
-      }
-
-      // If plan exists and is active, return error
-      return NextResponse.json(
-        { success: false, error: "Plan already exists and is active" },
-        { status: 409 }
-      );
+      return NextResponse.json({
+        success: true,
+        reactivated: existingPlan.deletedAt !== null || !existingPlan.active,
+        txRequired: false,
+        data: updatedPlan,
+        message: existingPlan.deletedAt !== null || !existingPlan.active
+          ? "Plan reactivated successfully"
+          : "Plan updated successfully",
+      });
     }
 
     // If no existing plan and client has not finalized, instruct to do on-chain tx

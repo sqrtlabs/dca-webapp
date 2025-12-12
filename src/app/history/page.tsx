@@ -80,6 +80,13 @@ const formatAddress = (addr: string) => {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 };
 
+const formatDateToLocalString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function HistoryPageContent() {
   const { address } = useAccount();
   const router = useRouter();
@@ -180,7 +187,7 @@ function HistoryPageContent() {
         const date = new Date(startDate);
         date.setDate(date.getDate() + day);
 
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = formatDateToLocalString(date);
         const count = historyData.executionsByDate[dateStr] || 0;
         const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
 
@@ -319,7 +326,7 @@ function HistoryPageContent() {
                 </div>
               </div>
               <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-6">
-                <div className="text-gray-400 text-sm mb-2">Total Invested</div>
+                <div className="text-gray-400 text-sm mb-2">Total Invested (till now)</div>
                 <div className="text-3xl font-bold text-white">
                   {formatCurrency(historyData.stats.totalInvested)}
                 </div>
@@ -370,7 +377,7 @@ function HistoryPageContent() {
                               const isCurrentMonth = day.date.getMonth() === monthDate.getMonth();
                               const isToday =
                                 day.date.toDateString() === new Date().toDateString();
-                              const dateStr = day.date.toISOString().split("T")[0];
+                              const dateStr = formatDateToLocalString(day.date);
                               const isSelected = selectedDate === dateStr;
                               const hasExecutions = day.count > 0;
 

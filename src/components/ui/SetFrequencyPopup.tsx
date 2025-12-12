@@ -205,125 +205,68 @@ export const SetFrequencyPopup: React.FC<SetFrequencyPopupProps> = ({
         return;
       }
 
-      // New plan flow: Check if user has sufficient USDC allowance
-      const requiredAllowance = BigInt(Number(amount) * 1_000_000); // Convert to wei (USDC has 6 decimals)
+      // New plan flow: Always create plan on-chain (even if it exists in DB)
+      const freqSeconds = getFrequencyInSeconds(frequency);
+      const amountInWei = Number(amount) * 1_000_000;
+
+      // Always create plan on-chain
+      console.log("Creating plan on-chain...");
+      const hash = await createPlan({
+        address: DCA_EXECUTOR_ADDRESS,
+        abi: DCA_ABI.abi,
+        functionName: "createPlan",
+        args: [tokenOut, finalRecipient],
+      });
+
+      setTxHash(hash);
+      await waitForTransactionReceipt(publicClient, { hash });
+
+      // Create/update plan in DB
+      const finalResp = await fetch("/api/plan/createPlan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userAddress: address,
+          tokenOutAddress: tokenOut,
+          recipient: finalRecipient,
+          amountIn: amountInWei,
+          frequency: freqSeconds,
+          finalize: true,
+        }),
+      });
+      const finalJson = await finalResp.json();
+      if (!finalJson.success) {
+        throw new Error(finalJson.error || "Failed to create/update plan in DB");
+      }
+
+      console.log("Plan created/updated successfully");
+
+      // Check if user has enough allowance for initial investment
+      const requiredAllowance = BigInt(amountInWei);
       const hasSufficientAllowance =
         currentAllowance && currentAllowance >= requiredAllowance;
 
-      if (hasSufficientAllowance) {
-        // User has sufficient allowance, create plan directly
-        console.log("User has sufficient allowance, creating plan directly...");
+      const createdPlanHash = finalJson.data?.planHash as string | undefined;
 
-        const freqSeconds = getFrequencyInSeconds(frequency);
-
-        // Preflight: may reactivate plan DB-side and skip on-chain create
-        const preResp = await fetch("/api/plan/createPlan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userAddress: address,
-            tokenOutAddress: tokenOut,
-            recipient: finalRecipient,
-            amountIn: Number(requiredAllowance),
-            frequency: freqSeconds,
-          }),
-        });
-        const preJson = await preResp.json();
-        if (!preJson.success) {
-          throw new Error(preJson.error || "Failed to prepare plan");
-        }
-
-        if (preJson.txRequired === false) {
-          // Plan exists and was reactivated
-          console.log("Plan reactivated successfully");
-
-          // Execute initial investment for reactivated plan (best-effort)
-          const reactivatedPlanHash = preJson.data?.planHash as
-            | string
-            | undefined;
-          if (reactivatedPlanHash) {
-            try {
-              const invest = await executeInitialInvestment(
-                reactivatedPlanHash
-              );
-              if (!invest.success) {
-                console.warn("Initial investment failed:", invest.error);
-              } else {
-                console.log(
-                  "Initial investment executed successfully:",
-                  invest.txHash
-                );
-              }
-            } catch (e) {
-              console.warn("Initial investment error:", e);
-            }
+      // Only execute initial investment if user has enough allowance
+      if (hasSufficientAllowance && createdPlanHash) {
+        try {
+          const invest = await executeInitialInvestment(createdPlanHash);
+          if (!invest.success) {
+            console.warn("Initial investment failed:", invest.error);
+          } else {
+            console.log("Initial investment executed successfully:", invest.txHash);
           }
-
-          toast.success("Plan reactivated successfully!");
-          onConfirm(Number(amount), frequency, preJson.data?.planHash, false, finalRecipient);
-          setIsLoading(false);
-          return;
+        } catch (e) {
+          console.warn("Initial investment error:", e);
         }
-
-        // Create plan on-chain
-        console.log("Creating plan on-chain...");
-        const hash = await createPlan({
-          address: DCA_EXECUTOR_ADDRESS,
-          abi: DCA_ABI.abi,
-          functionName: "createPlan",
-          args: [tokenOut, finalRecipient],
-        });
-
-        setTxHash(hash);
-        await waitForTransactionReceipt(publicClient, { hash });
-
-        // Finalize plan in DB
-        const finalResp = await fetch("/api/plan/createPlan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userAddress: address,
-            tokenOutAddress: tokenOut,
-            recipient: finalRecipient,
-            amountIn: Number(requiredAllowance),
-            frequency: freqSeconds,
-            finalize: true,
-          }),
-        });
-        const finalJson = await finalResp.json();
-        if (!finalJson.success) {
-          throw new Error(finalJson.error || "Failed to create plan in DB");
-        }
-
-        console.log("Plan created successfully");
-
-        // Execute initial investment (best-effort)
-        const createdPlanHash = finalJson.data?.planHash as string | undefined;
-        if (createdPlanHash) {
-          try {
-            const invest = await executeInitialInvestment(createdPlanHash);
-            if (!invest.success) {
-              console.warn("Initial investment failed:", invest.error);
-            } else {
-              console.log(
-                "Initial investment executed successfully:",
-                invest.txHash
-              );
-            }
-          } catch (e) {
-            console.warn("Initial investment error:", e);
-          }
-        }
-
-        toast.success("Plan created successfully!");
-        onConfirm(Number(amount), frequency, finalJson.data?.planHash, false, finalRecipient);
-      } else {
-        // User needs to approve more USDC, proceed to approval popup
-        console.log(
-          "User needs more USDC allowance, proceeding to approval popup..."
-        );
-        onConfirm(Number(amount), frequency, undefined, true, finalRecipient);
       }
+
+      toast.success("Plan created successfully!");
+
+      // Always show approval popup (even if they have enough allowance)
+      // Pass whether initial investment still needs to happen (!hasSufficientAllowance)
+      onConfirm(Number(amount), frequency, createdPlanHash, !hasSufficientAllowance, finalRecipient);
 
       setIsLoading(false);
     } catch (error) {

@@ -100,12 +100,19 @@ export async function GET(
       let totalTokensReceived = 0;
 
       if (plans.length > 0) {
-        const allExecutions = plans[0].executions;
-        totalInvestedValue = allExecutions.reduce(
+        // Use lastActivatedAt if available, otherwise fall back to createdAt
+        const activationDate = plans[0].lastActivatedAt || plans[0].createdAt;
+
+        // Filter executions to only include those after activation date
+        const filteredExecutions = plans[0].executions.filter(
+          (exec) => exec.executedAt > activationDate
+        );
+
+        totalInvestedValue = filteredExecutions.reduce(
           (sum, exec) => sum + parseFloat(exec.amountIn.toString()) / Math.pow(10, USDC_DECIMALS),
           0
         );
-        totalTokensReceived = allExecutions.reduce(
+        totalTokensReceived = filteredExecutions.reduce(
           (sum, exec) => sum + parseFloat(exec.amountOut.toString()) / Math.pow(10, parseInt(tokenData.decimals.toString())),
           0
         );
