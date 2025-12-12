@@ -103,6 +103,7 @@ export default function TokenPage({ params }: TokenPageProps) {
   const [isStoppingPlan, setIsStoppingPlan] = useState(false);
   const [isResumingPlan, setIsResumingPlan] = useState(false);
   const [copiedRecipient, setCopiedRecipient] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const [frequencyData, setFrequencyData] = useState<{
     amount: number;
@@ -377,18 +378,19 @@ export default function TokenPage({ params }: TokenPageProps) {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Top Bar */}
-      <div className="sticky top-0 bg-black z-40 border-b border-gray-800 px-4 lg:px-8 py-4">
-        <div className="flex justify-between items-center max-w-[1600px] mx-auto gap-4">
+      <div className="sticky top-0 bg-black z-40 border-b border-gray-800 px-2 sm:px-4 lg:px-8 py-3 sm:py-4">
+        <div className="flex justify-between items-center max-w-[1600px] mx-auto gap-1 sm:gap-2 lg:gap-4">
           {/* Left: Logo + Navigation + Back + Token Info */}
-          <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-1 min-w-0">
             <Image
               src="/dca2.png"
               alt="DCA"
               width={40}
               height={40}
-              className="cursor-pointer flex-shrink-0"
+              className="cursor-pointer flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
               onClick={() => router.push("/")}
             />
+            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
               <button
                 onClick={() => router.push("/")}
@@ -409,14 +411,23 @@ export default function TokenPage({ params }: TokenPageProps) {
                 History
               </button>
             </nav>
-            <div className="h-6 w-px bg-gray-700" />
+            {/* Mobile Hamburger Menu */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden p-1 sm:p-2 text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="hidden sm:block h-6 w-px bg-gray-700" />
             <button
               onClick={() => router.push("/")}
-              className="text-white hover:text-gray-300 transition-colors flex-shrink-0"
+              className="text-white hover:text-gray-300 transition-colors flex-shrink-0 text-lg sm:text-xl px-1"
             >
               ←
             </button>
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
               {token.icon &&
               (token.icon.startsWith("http://") ||
                 token.icon.startsWith("https://") ||
@@ -424,16 +435,16 @@ export default function TokenPage({ params }: TokenPageProps) {
                 <Image
                   src={token.icon}
                   alt="Token Icon"
-                  className="w-8 h-8 rounded-full object-cover border-2 border-orange-700 flex-shrink-0"
+                  className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 rounded-full object-cover border-2 border-orange-700 flex-shrink-0"
                   width={32}
                   height={32}
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full border-2 border-gray-700 bg-[#1E1E1F] flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">{token.name[0]}</span>
+                <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 rounded-full border-2 border-gray-700 bg-[#1E1E1F] flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs sm:text-sm lg:text-lg">{token.name[0]}</span>
                 </div>
               )}
-              <span className="text-lg font-medium truncate" title={token.name}>
+              <span className="text-xs sm:text-sm lg:text-lg font-medium truncate" title={token.name}>
                 {token.name}
               </span>
             </div>
@@ -444,6 +455,47 @@ export default function TokenPage({ params }: TokenPageProps) {
             <BalanceDisplay onOpenApproval={() => setShowTokenApproval(true)} />
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {showMobileMenu && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setShowMobileMenu(false)}
+            />
+            <div className="absolute top-full left-0 right-0 bg-[#1A1A1A] border-b border-[#2A2A2A] shadow-2xl z-50 lg:hidden">
+              <nav className="flex flex-col p-2">
+                <button
+                  onClick={() => {
+                    router.push("/");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/explore");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  Explore
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/history");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  History
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Main Content - Web Layout (70/30 split) on large screens, stacked on mobile */}
@@ -453,18 +505,18 @@ export default function TokenPage({ params }: TokenPageProps) {
           {/* Chart & Actions Section - 70% on web */}
           <div className="w-full lg:w-[70%] space-y-6">
             {/* Chart */}
-            <div className="bg-[#131313] rounded-xl p-6 shadow-lg">
+            <div className="bg-[#131313] rounded-xl p-4 sm:p-6 shadow-lg">
               <div className="text-gray-400 text-sm mb-1">Price</div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-4xl font-light">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div className="text-2xl sm:text-4xl font-light">
                   ${Number(token.price).toFixed(2)}
                 </div>
-                <div className="flex space-x-1 bg-[#1E1E1F] rounded px-4 py-2">
+                <div className="flex space-x-1 bg-[#1E1E1F] rounded px-2 sm:px-4 py-1.5 sm:py-2">
                   {["1H", "D", "W", "M"].map((period) => (
                     <button
                       key={period}
                       onClick={() => setSelectedPeriod(period)}
-                      className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-1 rounded text-xs font-medium transition-colors ${
                         selectedPeriod === period
                           ? "bg-black text-white"
                           : "text-gray-400 hover:text-white"
@@ -475,7 +527,7 @@ export default function TokenPage({ params }: TokenPageProps) {
                   ))}
                 </div>
               </div>
-              <div className="relative h-[400px] lg:h-[500px]">
+              <div className="relative h-[300px] sm:h-[400px] lg:h-[500px]">
                 <iframe
                   id="geckoterminal-embed"
                   title="GeckoTerminal Embed"

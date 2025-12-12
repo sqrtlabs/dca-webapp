@@ -189,6 +189,7 @@ const Home = () => {
 
   const [showTokenApproval, setShowTokenApproval] = useState(false);
   const [showTokenAdd, setShowTokenAdd] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const { address } = useAccount();
   const router = useRouter();
@@ -307,17 +308,18 @@ const Home = () => {
     <div className="min-h-screen bg-black text-white">
       {/* Header - Logo | Explore | History | Search | Wallet */}
       <div className="sticky top-0 bg-black z-40 border-b border-gray-800 px-4 lg:px-8 py-4">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: DCA Logo & Navigation */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <Image
               src="/dca2.png"
               alt="DCA"
               width={40}
               height={40}
-              className="cursor-pointer"
+              className="cursor-pointer w-8 h-8 sm:w-10 sm:h-10"
               onClick={() => router.push("/")}
             />
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
               <button
                 className="px-4 py-2 text-orange-500 bg-orange-500/10 rounded-lg font-medium"
@@ -337,10 +339,19 @@ const Home = () => {
                 History
               </button>
             </nav>
+            {/* Mobile Hamburger Menu */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
 
-          {/* Center: Search */}
-          <div className="flex-1 max-w-[600px]">
+          {/* Center: Search - Hidden on small mobile, visible on sm+ */}
+          <div className="hidden sm:flex flex-1 max-w-[600px]">
             {!showSearch ? (
               <button
                 onClick={() => setShowSearch(true)}
@@ -362,7 +373,7 @@ const Home = () => {
                 <span className="text-sm">Search tokens...</span>
               </button>
             ) : (
-              <div className="relative">
+              <div className="relative w-full">
                 <input
                   type="text"
                   value={searchQuery}
@@ -400,15 +411,195 @@ const Home = () => {
             )}
           </div>
 
-          {/* Right: Wallet & Balance */}
-          <div className="flex-shrink-0">
+          {/* Right: Search Icon (mobile only) & Wallet */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowSearch(true)}
+              className="sm:hidden p-2 text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
             <BalanceDisplay onOpenApproval={() => setShowTokenApproval(true)} />
           </div>
         </div>
 
-        {/* Search Results Dropdown */}
+        {/* Mobile Menu Dropdown */}
+        {showMobileMenu && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setShowMobileMenu(false)}
+            />
+            <div className="absolute top-full left-0 right-0 bg-[#1A1A1A] border-b border-[#2A2A2A] shadow-2xl z-50 md:hidden">
+              <nav className="flex flex-col p-2">
+                <button
+                  onClick={() => {
+                    router.push("/");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-orange-500 bg-orange-500/10 rounded-lg font-medium"
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/explore");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  Explore
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/history");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  History
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
+
+        {/* Mobile Search Overlay */}
+        {showSearch && (
+          <div className="sm:hidden fixed inset-0 bg-black z-50 p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => {
+                  setShowSearch(false);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+                className="text-white p-2"
+              >
+                ←
+              </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or address..."
+                  autoFocus
+                  className="w-full px-4 py-2 pl-10 bg-[#1E1E1F] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                />
+                <svg
+                  className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+            {/* Mobile Search Results */}
+            {searchQuery && (
+              <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl max-h-[calc(100vh-120px)] overflow-y-auto">
+            {isSearching ? (
+              <div className="p-8 text-center">
+                <div className="flex justify-center mb-3">
+                  <div className="w-8 h-8 border-2 border-gray-600 border-t-orange-500 rounded-full animate-spin"></div>
+                </div>
+                <p className="text-gray-400 text-sm">Searching tokens...</p>
+              </div>
+            ) : searchResults.length > 0 ? (
+              <div className="p-2">
+                {searchResults.map((token) => (
+                  <div
+                    key={token.address}
+                    onClick={() => {
+                      router.push(`/token/${token.address}`);
+                      setShowSearch(false);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                    }}
+                    className="flex items-center gap-3 p-3 hover:bg-[#2A2A2A] rounded-lg cursor-pointer transition-all duration-200 group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {token.image &&
+                      (token.image.startsWith("http://") ||
+                        token.image.startsWith("https://") ||
+                        token.image.startsWith("/")) ? (
+                        <Image
+                          src={token.image}
+                          alt={token.symbol}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-black font-bold text-base">
+                          {token.symbol?.[0] || "?"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-semibold truncate group-hover:text-orange-400 transition-colors">
+                          {token.symbol}
+                        </span>
+                      </div>
+                      <div className="text-gray-400 text-sm truncate">
+                        {token.name}
+                      </div>
+                    </div>
+                    <svg
+                      className="w-5 h-5 text-gray-600 group-hover:text-orange-500 transition-colors"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-gray-300 font-medium mb-1">No tokens found</p>
+                <p className="text-gray-500 text-sm">Try a different search term</p>
+              </div>
+            )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Desktop Search Results Dropdown */}
         {showSearch && searchQuery && (
-          <div className="absolute left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] lg:w-[600px] mt-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-2xl max-h-[400px] overflow-y-auto z-50">
+          <div className="hidden sm:block absolute left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] lg:w-[600px] mt-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-2xl max-h-[400px] overflow-y-auto z-50">
             {isSearching ? (
               <div className="p-8 text-center">
                 <div className="flex justify-center mb-3">
@@ -620,7 +811,7 @@ const Home = () => {
                   </div>
 
                   {/* Chart Mode Toggle */}
-                  <div className="mt-4 lg:mt-0 bg-[#1E1E1F] border border-[#2A2A2A] rounded-full p-1 inline-flex">
+                  <div className="mt-4 lg:mt-0 bg-[#1E1E1F] border border-[#2A2A2A] rounded-full p-1 flex self-start lg:self-auto">
                     <button
                       onClick={() => setChartMode("value")}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -647,7 +838,7 @@ const Home = () => {
                 {/* Portfolio Chart */}
                 {portfolioData?.history && portfolioData.history.length > 0 && (
                   <div className="relative w-full space-y-4">
-                    <div style={{ height: "400px" }}>
+                    <div className="h-[250px] sm:h-[350px] lg:h-[400px]">
                     {(() => {
                       const history = portfolioData.history;
                       const width = 1000;

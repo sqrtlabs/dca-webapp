@@ -100,10 +100,10 @@ export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-1 sm:gap-2 ${className}`}>
       {authenticated && address && (
         <button
-          className="flex items-center bg-[#1F1F1F] hover:bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors h-10"
+          className="flex items-center bg-[#1F1F1F] hover:bg-[#2A2A2A] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs lg:text-sm cursor-pointer transition-colors h-8 sm:h-9 lg:h-10"
           onClick={() => onOpenApproval?.()}
         >
           <Image
@@ -111,11 +111,11 @@ export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
             alt="USDC"
             width={16}
             height={16}
-            className="mr-1.5"
+            className="mr-0.5 sm:mr-1 lg:mr-1.5 w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4"
           />
-          <span className="font-medium">{isLoading ? "..." : formatBalance(balanceData?.value)}</span>
-          <span className="mx-2 text-gray-500">|</span>
-          <span className="text-gray-400">
+          <span className="font-medium whitespace-nowrap">{isLoading ? "..." : formatBalance(balanceData?.value)}</span>
+          <span className="mx-0.5 sm:mx-1 lg:mx-2 text-gray-500">|</span>
+          <span className="text-gray-400 whitespace-nowrap">
             {isLoading ? "..." : formatAllowance(allowanceData)}
           </span>
         </button>
@@ -126,7 +126,7 @@ export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
         {!authenticated ? (
           <button
             onClick={login}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-black font-semibold rounded-lg transition-colors h-10 whitespace-nowrap"
+            className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-orange-500 hover:bg-orange-600 text-black font-semibold rounded-lg transition-colors h-8 sm:h-9 lg:h-10 text-[10px] sm:text-xs lg:text-sm whitespace-nowrap"
           >
             Connect Wallet
           </button>
@@ -134,14 +134,18 @@ export const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
           <>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-3 py-2 bg-[#1F1F1F] hover:bg-[#2A2A2A] rounded-lg transition-colors h-10"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#1F1F1F] hover:bg-[#2A2A2A] rounded-lg transition-colors h-8 sm:h-9 lg:h-10"
             >
-              {address && <Identicon address={address} size={24} />}
-              <span className="text-white text-sm hidden md:inline">
+              {address && (
+                <div className="w-[18px] h-[18px] sm:w-5 sm:h-5 lg:w-6 lg:h-6 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                  <Identicon address={address} size={24} />
+                </div>
+              )}
+              <span className="text-white text-[10px] sm:text-xs lg:text-sm hidden md:inline">
                 {address && formatAddress(address)}
               </span>
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform ${
+                className={`hidden sm:block w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-gray-400 transition-transform ${
                   showDropdown ? "rotate-180" : ""
                 }`}
                 fill="none"

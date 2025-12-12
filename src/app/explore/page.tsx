@@ -46,6 +46,7 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showTokenAdd, setShowTokenAdd] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Token;
     direction: "asc" | "desc";
@@ -172,17 +173,18 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <div className="sticky top-0 bg-black z-40 border-b border-gray-800 px-4 lg:px-8 py-4">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Logo & Navigation */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <Image
               src="/dca2.png"
               alt="DCA"
               width={40}
               height={40}
-              className="cursor-pointer"
+              className="cursor-pointer w-8 h-8 sm:w-10 sm:h-10"
               onClick={() => router.push("/")}
             />
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
               <button
                 onClick={() => router.push("/")}
@@ -202,15 +204,63 @@ export default function ExplorePage() {
                 History
               </button>
             </nav>
+            {/* Mobile Hamburger Menu */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
-
-          
 
           {/* Right: Wallet & Balance */}
           <div className="flex-shrink-0">
             <BalanceDisplay onOpenApproval={() => {}} />
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {showMobileMenu && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setShowMobileMenu(false)}
+            />
+            <div className="absolute top-full left-0 right-0 bg-[#1A1A1A] border-b border-[#2A2A2A] shadow-2xl z-50 md:hidden">
+              <nav className="flex flex-col p-2">
+                <button
+                  onClick={() => {
+                    router.push("/");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/explore");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-orange-500 bg-orange-500/10 rounded-lg font-medium"
+                >
+                  Explore
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/history");
+                    setShowMobileMenu(false);
+                  }}
+                  className="px-4 py-3 text-left text-gray-400 hover:text-white hover:bg-[#1E1E1F] rounded-lg transition-colors"
+                >
+                  History
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Main Content */}
